@@ -76,7 +76,7 @@ def preprocess_answer(answer):
 def main():
     students = {}
 
-    with open('result_20230810_0003.csv', 'r') as f:
+    with open('result_20230810_1230.csv', 'r') as f:
         records = [row for row in csv.reader(f, delimiter=',')]
         body = records[1:]
 

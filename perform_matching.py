@@ -171,7 +171,7 @@ def preprocess_answer(answer):
 def main():
     students = {}
 
-    with open('result_20230810_0003.csv', 'r') as f:
+    with open('result_20230810_1230.csv', 'r') as f:
         records = [row for row in csv.reader(f, delimiter=',')]
         body = records[1:]
 
@@ -204,6 +204,11 @@ def main():
     print(f'จำนวนรุ่นน้อง: {n_junior}')
     print(f'\nrandom รุ่นพี่ที่จะมีสายรหัส 2 คนทั้งหมด {n_junior-n_senior} คน ดังนี้')
 
+    if input('\ntype y to continue: ') != 'y':
+        print('force quit.')
+        return
+    print()
+
     # duplicate senior
     lucky_senior = random.sample(senior, n_junior-n_senior)
     print('\n'.join(f"{i+1}. {each['nickname']} ({each['id']})" for i, each in enumerate(lucky_senior)))
@@ -217,17 +222,63 @@ def main():
     global N
     N = n_junior
 
+    if input('\ntype y to continue: ') != 'y':
+        print('force quit.')
+        return
+
     get_preference_list(senior, junior)
     results = stable_matching(senior, junior)
 
-    print('\nผลการจับคู่ด้วย Gale-Shapley stable matching:')
+    hints = {} # key: senior_id, value: hint<str>
+    with open('hint_20230810_1130.csv', 'r') as f:
+        records = [row for row in csv.reader(f, delimiter=',')]
+        body = records[1:]
+
+        for each in body:
+            id = each[2]
+            hint1 = each[3]
+            if id in hints:
+                print('wow', id)
+            else:
+                hints[id] = hint1
+
+
+    matching_results = []
+    gen_hint_dict = []
+    gen_point_dict_idlist = []
+    gen_point_dict_pointlist = []
+
     for k, v in results.items():
         if k.startswith('65'):
             senior_id = k[:-4] if k.endswith('_dup') else k
             junior_id = v['partner']
-            print(f"{students[senior_id]['nickname']} ({senior_id}) <แมทช์กับ> น้อง{students[junior_id]['nickname']} ({junior_id})")
-            # print(v['prefered_type'], results[v['partner']]['prefered_type'])
-            # print(euclidean_distance(v['ans'], results[v['partner']]['ans']))
+
+            matching_results.append(f"{students[senior_id]['nickname']} ({senior_id}) <แมทช์กับ> น้อง{students[junior_id]['nickname']} ({junior_id})")
+            
+            gen_hint_dict.append(f"'{junior_id}': ['{hints[senior_id]}'],")
+            
+            gen_point_dict_idlist.append(junior_id)
+            gen_point_dict_idlist.append(senior_id)
+            gen_point_dict_pointlist.append(students[junior_id]['ans'])
+            gen_point_dict_pointlist.append(students[senior_id]['ans'])
+
+
+
+    print('\nผลการจับคู่ด้วย Gale-Shapley stable matching:')
+    print('\n'.join(matching_results))
+
+    print('\ngenerate hint_dict:')
+    print('\n'.join(gen_hint_dict))
+
+    pca = PCA(3)
+    df = pca.fit_transform(np.array(gen_point_dict_pointlist))
+
+    gen_point_dict = []
+    for i in range(0, df.shape[0], 2):
+        gen_point_dict.append(f"'{gen_point_dict_idlist[i]}': [[{df[i , 0]:.4f}, {df[i , 1]:.4f}, {df[i , 2]:.4f}], [{df[i+1 , 0]:.4f}, {df[i+1 , 1]:.4f}, {df[i+1 , 2]:.4f}]],")
+
+    print('\ngenerate point_dict:')
+    print('\n'.join(gen_point_dict))
 
     plot(results)
 
